@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wohnungsbesichtigung</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap');
+  :root {
+    --cream: #F5F0E8; --warm: #E8DDD0; --terracotta: #C4714A;
+    --terracotta-dark: #A55A37; --sage: #7A8C6E; --charcoal: #2C2C2C;
+    --mid: #6B6B6B; --light: #9A9A9A; --white: #FDFAF6;
+    --shadow: rgba(44,44,44,0.12);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Sans',sans-serif; background:var(--cream); color:var(--charcoal); min-height:100vh; }
+
+  header { background:var(--charcoal); color:var(--cream); padding:3rem 2rem 2.5rem; text-align:center; position:relative; overflow:hidden; }
+  header::before { content:''; position:absolute; inset:0; background:repeating-linear-gradient(45deg,transparent,transparent 40px,rgba(255,255,255,0.02) 40px,rgba(255,255,255,0.02) 41px); }
+  header .badge { display:inline-block; background:var(--terracotta); color:white; font-size:0.7rem; font-weight:500; letter-spacing:0.15em; text-transform:uppercase; padding:0.35rem 1rem; border-radius:2px; margin-bottom:1.2rem; }
+  header h1 { font-family:'Playfair Display',serif; font-size:clamp(2rem,5vw,3.2rem); font-weight:700; line-height:1.15; margin-bottom:0.8rem; }
+  header p { font-size:0.95rem; color:rgba(245,240,232,0.65); font-weight:300; max-width:480px; margin:0 auto; line-height:1.6; }
+
+  #admin-panel { display:none; background:var(--charcoal); border-top:1px solid rgba(255,255,255,0.08); padding:2rem; color:var(--cream); }
+  #admin-panel h2 { font-family:'Playfair Display',serif; font-size:1.3rem; margin-bottom:1.5rem; color:var(--terracotta); }
+  .admin-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem; margin-bottom:1rem; }
+  .admin-field label { display:block; font-size:0.75rem; letter-spacing:0.08em; text-transform:uppercase; color:rgba(245,240,232,0.5); margin-bottom:0.4rem; }
+  .admin-field input { width:100%; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:4px; color:var(--cream); padding:0.6rem 0.8rem; font-family:'DM Sans',sans-serif; font-size:0.9rem; outline:none; transition:border-color 0.2s; }
+  .admin-field input:focus { border-color:var(--terracotta); }
+  .btn-add-slot { background:var(--terracotta); color:white; border:none; padding:0.65rem 1.4rem; border-radius:4px; font-family:'DM Sans',sans-serif; font-size:0.88rem; font-weight:500; cursor:pointer; transition:background 0.2s,transform 0.1s; margin-top:0.5rem; }
+  .btn-add-slot:hover { background:var(--terracotta-dark); transform:translateY(-1px); }
+  .admin-hint { font-size:0.78rem; color:rgba(245,240,232,0.35); margin-top:0.8rem; }
+
+  .admin-toggle { text-align:center; padding:0.6rem; background:rgba(44,44,44,0.05); border-bottom:1px solid var(--warm); }
+  .admin-toggle button { background:none; border:none; font-family:'DM Sans',sans-serif; font-size:0.78rem; color:var(--light); cursor:pointer; letter-spacing:0.05em; text-decoration:underline; text-underline-offset:3px; }
+  .admin-toggle button:hover { color:var(--terracotta); }
+
+  main { max-width:780px; margin:0 auto; padding:2.5rem 1.5rem 4rem; }
+  .section-title { font-family:'Playfair Display',serif; font-size:1.5rem; margin-bottom:1.5rem; color:var(--charcoal); position:relative; padding-bottom:0.8rem; }
+  .section-title::after { content:''; position:absolute; bottom:0; left:0; width:40px; height:2px; background:var(--terracotta); }
+
+  #slots-container { display:flex; flex-direction:column; gap:1rem; }
+  .slot-card { background:var(--white); border:1px solid var(--warm); border-radius:8px; overflow:hidden; box-shadow:0 2px 8px var(--shadow); transition:box-shadow 0.2s; }
+  .slot-card:hover { box-shadow:0 4px 20px var(--shadow); }
+  .slot-card.full { opacity:0.6; }
+  .slot-header { display:flex; align-items:center; padding:1rem 1.2rem; gap:1rem; border-bottom:1px solid var(--warm); cursor:pointer; user-select:none; }
+  .slot-header:hover .slot-time { color:var(--terracotta); }
+  .slot-icon { width:40px; height:40px; background:var(--cream); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0; }
+  .slot-info { flex:1; }
+  .slot-time { font-family:'Playfair Display',serif; font-size:1.15rem; font-weight:700; color:var(--charcoal); transition:color 0.2s; display:block; }
+  .slot-date { font-size:0.8rem; color:var(--light); margin-top:0.1rem; }
+  .slot-meta { display:flex; align-items:center; gap:1rem; }
+  .slot-count { font-size:0.82rem; color:var(--mid); white-space:nowrap; }
+  .slot-bar { width:80px; height:5px; background:var(--warm); border-radius:3px; overflow:hidden; }
+  .slot-bar-fill { height:100%; background:var(--terracotta); border-radius:3px; transition:width 0.4s ease; }
+  .slot-bar-fill.full { background:var(--sage); }
+  .slot-chevron { color:var(--light); transition:transform 0.25s; font-size:0.8rem; }
+  .slot-card.open .slot-chevron { transform:rotate(180deg); }
+  .slot-full-badge { background:var(--sage); color:white; font-size:0.68rem; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; padding:0.25rem 0.6rem; border-radius:3px; }
+
+  .slot-body { display:none; padding:1.2rem; border-top:1px solid var(--warm); background:var(--cream); }
+  .slot-card.open .slot-body { display:block; }
+  .registrants-list { margin-bottom:1rem; }
+  .registrants-title { font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--light); margin-bottom:0.6rem; }
+  .registrant-item { display:flex; align-items:center; justify-content:space-between; padding:0.4rem 0; border-bottom:1px dashed var(--warm); font-size:0.88rem; }
+  .registrant-item:last-child { border-bottom:none; }
+  .registrant-name { color:var(--charcoal); font-weight:500; }
+  .registrant-time { color:var(--light); font-size:0.75rem; }
+  .registrant-delete { background:none; border:none; cursor:pointer; color:var(--light); font-size:1rem; line-height:1; padding:2px 4px; border-radius:3px; display:none; transition:color 0.2s,background 0.2s; }
+  .registrant-delete:hover { color:#c0392b; background:rgba(192,57,43,0.1); }
+  body.admin-mode .registrant-delete { display:inline-block; }
+  .empty-slots { font-size:0.85rem; color:var(--light); font-style:italic; padding:0.4rem 0; }
+
+  .signup-row { display:flex; gap:0.7rem; margin-top:0.8rem; }
+  .signup-input { flex:1; background:var(--white); border:1.5px solid var(--warm); border-radius:5px; padding:0.65rem 0.9rem; font-family:'DM Sans',sans-serif; font-size:0.9rem; color:var(--charcoal); outline:none; transition:border-color 0.2s; }
+  .signup-input:focus { border-color:var(--terracotta); }
+  .signup-input::placeholder { color:var(--light); }
+  .btn-signup { background:var(--terracotta); color:white; border:none; padding:0.65rem 1.2rem; border-radius:5px; font-family:'DM Sans',sans-serif; font-size:0.88rem; font-weight:500; cursor:pointer; white-space:nowrap; transition:background 0.2s,transform 0.1s; }
+  .btn-signup:hover { background:var(--terracotta-dark); transform:translateY(-1px); }
+
+  .btn-delete-slot { display:none; background:none; border:none; font-size:0.78rem; color:#c0392b; cursor:pointer; text-decoration:underline; font-family:'DM Sans',sans-serif; margin-left:auto; padding:0; }
+  body.admin-mode .btn-delete-slot { display:inline-block; }
+
+  #empty-state { text-align:center; padding:4rem 2rem; color:var(--light); }
+  #empty-state .empty-icon { font-size:3rem; margin-bottom:1rem; }
+  #empty-state p { font-size:0.95rem; line-height:1.6; }
+
+  #pw-overlay { display:none; position:fixed; inset:0; background:rgba(44,44,44,0.6); z-index:999; align-items:center; justify-content:center; }
+  #pw-overlay.visible { display:flex; }
+  #pw-box { background:var(--white); border-radius:10px; padding:2rem; width:320px; box-shadow:0 10px 40px rgba(0,0,0,0.25); }
+  #pw-box h3 { font-family:'Playfair Display',serif; font-size:1.2rem; margin-bottom:1rem; }
+  #pw-box input { width:100%; border:1.5px solid var(--warm); border-radius:5px; padding:0.65rem 0.9rem; font-family:'DM Sans',sans-serif; font-size:0.9rem; outline:none; margin-bottom:0.8rem; transition:border-color 0.2s; }
+  #pw-box input:focus { border-color:var(--terracotta); }
+  #pw-box .pw-buttons { display:flex; gap:0.6rem; }
+  #pw-box button { flex:1; padding:0.6rem; border-radius:5px; border:none; font-family:'DM Sans',sans-serif; font-size:0.88rem; font-weight:500; cursor:pointer; transition:background 0.2s; }
+  #pw-confirm { background:var(--terracotta); color:white; }
+  #pw-confirm:hover { background:var(--terracotta-dark); }
+  #pw-cancel { background:var(--warm); color:var(--charcoal); }
+  #pw-error { color:#c0392b; font-size:0.8rem; margin-bottom:0.6rem; display:none; }
+
+  #toast { position:fixed; bottom:1.5rem; left:50%; transform:translateX(-50%) translateY(80px); background:var(--charcoal); color:var(--cream); padding:0.7rem 1.4rem; border-radius:5px; font-size:0.88rem; font-weight:500; box-shadow:0 4px 20px rgba(0,0,0,0.3); transition:transform 0.3s ease; z-index:1000; white-space:nowrap; }
+  #toast.show { transform:translateX(-50%) translateY(0); }
+  #toast.success { background:var(--sage); }
+  #toast.error { background:#c0392b; }
+
+  @media (max-width:540px) {
+    .signup-row { flex-direction:column; }
+    .slot-meta { flex-direction:column; align-items:flex-start; gap:0.4rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="badge">Wohnungsbesichtigung</div>
+  <h1 id="apt-title">Terminvergabe</h1>
+  <p id="apt-desc">Trag dich einfach in einen freien Zeitslot ein. Kein Konto nötig.</p>
+</header>
+
+<div class="admin-toggle">
+  <button onclick="openAdminLogin()">⚙ Verwalter-Modus</button>
+</div>
+
+<div id="admin-panel">
+  <h2>🏠 Neuen Termin hinzufügen</h2>
+  <div class="admin-grid">
+    <div class="admin-field"><label>Datum</label><input type="date" id="new-date"></div>
+    <div class="admin-field"><label>Uhrzeit</label><input type="time" id="new-time"></div>
+    <div class="admin-field"><label>Max. Personen</label><input type="number" id="new-max" value="3" min="1" max="20"></div>
+    <div class="admin-field"><label>Beschreibung (optional)</label><input type="text" id="new-desc" placeholder="z.B. Eingang Hinterhaus"></div>
+  </div>
+  <button class="btn-add-slot" onclick="addSlot()">+ Termin hinzufügen</button>
+  <div style="margin-top:1.2rem;padding-top:1.2rem;border-top:1px solid rgba(255,255,255,0.08);">
+    <div class="admin-field" style="max-width:320px;margin-bottom:0.8rem;">
+      <label>Wohnungsbezeichnung</label>
+      <input type="text" id="apt-title-input" placeholder="z.B. 3-Zimmer Altbau, Kreuzberg" oninput="updateTitle()">
+    </div>
+    <div class="admin-field" style="max-width:420px;">
+      <label>Kurzbeschreibung</label>
+      <input type="text" id="apt-desc-input" placeholder="z.B. 75 m², 4. OG, ab 01.06. frei" oninput="updateDesc()">
+    </div>
+  </div>
+  <p class="admin-hint" style="margin-top:1rem;">💡 Passwort: <strong>1234</strong> — in Zeile 1 des Scripts ändern</p>
+</div>
+
+<main>
+  <h2 class="section-title">Verfügbare Termine</h2>
+  <div id="slots-container"></div>
+  <div id="empty-state" style="display:none">
+    <div class="empty-icon">📋</div>
+    <p>Noch keine Termine eingetragen.<br>Die Vermieter fügen bald Termine hinzu!</p>
+  </div>
+</main>
+
+<div id="pw-overlay">
+  <div id="pw-box">
+    <h3>🔐 Verwalter-Zugang</h3>
+    <input type="password" id="pw-input" placeholder="Passwort eingeben" onkeydown="if(event.key==='Enter')confirmPw()">
+    <div id="pw-error">Falsches Passwort.</div>
+    <div class="pw-buttons">
+      <button id="pw-cancel" onclick="closePwModal()">Abbrechen</button>
+      <button id="pw-confirm" onclick="confirmPw()">Bestätigen</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── EINSTELLUNGEN ──────────────────────────────────────
+const ADMIN_PW = "130124";
+const FB = "https://besichtigung-751b2-default-rtdb.europe-west1.firebasedatabase.app/data.json";
+// ──────────────────────────────────────────────────────
+
+let slots = [];
+let appTitle = 'Terminvergabe';
+let appDesc  = 'Trag dich einfach in einen freien Zeitslot ein. Kein Konto nötig.';
+let adminMode = false;
+
+async function fbRead() {
+  const r = await fetch(FB);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return await r.json();
+}
+async function fbWrite(d) {
+  const r = await fetch(FB, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+}
+
+async function loadData() {
+  try {
+    const raw = await fbRead();
+    if (raw && typeof raw === 'object') {
+      if (raw.title) appTitle = raw.title;
+      if (raw.desc)  appDesc  = raw.desc;
+      let s = raw.slots;
+      if (Array.isArray(s))                slots = s;
+      else if (s && typeof s === 'object') slots = Object.values(s);
+      else                                 slots = [];
+      slots = slots
+        .filter(s => s && s.id && s.date && s.time)
+        .map(s => ({ ...s, registrants: Array.isArray(s.registrants) ? s.registrants : [] }));
+    } else {
+      slots = [];
+    }
+  } catch(e) {
+    console.error('Laden fehlgeschlagen:', e);
+    slots = [];
+  }
+  document.getElementById('apt-title').textContent = appTitle;
+  document.getElementById('apt-desc').textContent  = appDesc;
+  renderSlots();
+}
+
+async function saveData() {
+  try {
+    await fbWrite({ title: appTitle, desc: appDesc, slots });
+  } catch(e) {
+    showToast('Speichern fehlgeschlagen: ' + e.message, 'error');
+  }
+}
+
+function renderSlots() {
+  if (!Array.isArray(slots)) slots = [];
+  const cont  = document.getElementById('slots-container');
+  const empty = document.getElementById('empty-state');
+  if (slots.length === 0) { cont.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  const sorted = [...slots].sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
+  cont.innerHTML = sorted.map(slot => {
+    const regs  = Array.isArray(slot.registrants) ? slot.registrants : [];
+    const count = regs.length;
+    const max   = Number(slot.max) || 1;
+    const full  = count >= max;
+    const pct   = Math.min(100, (count/max)*100);
+    const regHtml = regs.length > 0
+      ? regs.map(r => `<div class="registrant-item">
+          <span class="registrant-name">👤 ${esc(r.name)}</span>
+          <span class="registrant-time">${r.ts||''}</span>
+          <button class="registrant-delete" onclick="removeReg('${slot.id}','${r.id}')">✕</button>
+        </div>`).join('')
+      : '<div class="empty-slots">Noch niemand eingetragen.</div>';
+    return `<div class="slot-card${full?' full':''}" id="card-${slot.id}">
+      <div class="slot-header" onclick="toggle('${slot.id}')">
+        <div class="slot-icon">🗓</div>
+        <div class="slot-info">
+          <span class="slot-time">${slot.time} Uhr${slot.desc?' · '+esc(slot.desc):''}</span>
+          <div class="slot-date">${fmtDate(slot.date)}</div>
+        </div>
+        <div class="slot-meta">
+          ${full?'<span class="slot-full-badge">Voll</span>':''}
+          <span class="slot-count">${count}/${max}</span>
+          <div class="slot-bar"><div class="slot-bar-fill${full?' full':''}" style="width:${pct}%"></div></div>
+          <button class="btn-delete-slot" onclick="event.stopPropagation();delSlot('${slot.id}')">Löschen</button>
+          <span class="slot-chevron">▼</span>
+        </div>
+      </div>
+      <div class="slot-body">
+        <div class="registrants-list"><div class="registrants-title">Anmeldungen</div>${regHtml}</div>
+        ${!full
+          ? `<div class="signup-row">
+               <input class="signup-input" type="text" id="n-${slot.id}" placeholder="Dein Name" maxlength="60" onkeydown="if(event.key==='Enter')signup('${slot.id}')">
+               <button class="btn-signup" onclick="signup('${slot.id}')">Eintragen</button>
+             </div>`
+          : '<p style="font-size:0.85rem;color:var(--sage);font-weight:500;">✓ Dieser Termin ist leider ausgebucht.</p>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggle(id) { document.getElementById('card-'+id).classList.toggle('open'); }
+
+async function signup(slotId) {
+  const inp  = document.getElementById('n-'+slotId);
+  const name = inp.value.trim();
+  if (!name) { showToast('Bitte Namen eingeben.','error'); return; }
+  const slot = slots.find(s => s.id === slotId);
+  if (!slot) return;
+  if (!Array.isArray(slot.registrants)) slot.registrants = [];
+  if (slot.registrants.length >= slot.max) { showToast('Termin ist voll.','error'); return; }
+  if (slot.registrants.some(r => r.name.toLowerCase() === name.toLowerCase())) { showToast('Name bereits eingetragen.','error'); return; }
+  slot.registrants.push({ id: uid(), name, ts: nowStr() });
+  await saveData();
+  renderSlots();
+  setTimeout(() => { const c = document.getElementById('card-'+slotId); if(c) c.classList.add('open'); }, 10);
+  showToast('✓ Erfolgreich eingetragen!','success');
+}
+
+async function removeReg(slotId, regId) {
+  const slot = slots.find(s => s.id === slotId);
+  if (!slot) return;
+  slot.registrants = (slot.registrants||[]).filter(r => r.id !== regId);
+  await saveData();
+  renderSlots();
+  setTimeout(() => { const c = document.getElementById('card-'+slotId); if(c) c.classList.add('open'); }, 10);
+  showToast('Person entfernt.');
+}
+
+async function addSlot() {
+  const date = document.getElementById('new-date').value;
+  const time = document.getElementById('new-time').value;
+  const max  = parseInt(document.getElementById('new-max').value);
+  const desc = document.getElementById('new-desc').value.trim();
+  if (!date || !time) { showToast('Datum und Uhrzeit angeben.','error'); return; }
+  if (isNaN(max) || max < 1) { showToast('Maximale Anzahl ungültig.','error'); return; }
+  slots.push({ id: uid(), date, time, max, desc, registrants: [] });
+  await saveData();
+  renderSlots();
+  showToast('✓ Termin hinzugefügt!','success');
+  document.getElementById('new-desc').value = '';
+}
+
+async function delSlot(id) {
+  if (!confirm('Diesen Termin wirklich löschen?')) return;
+  slots = slots.filter(s => s.id !== id);
+  await saveData();
+  renderSlots();
+  showToast('Termin gelöscht.');
+}
+
+async function updateTitle() {
+  appTitle = document.getElementById('apt-title-input').value || 'Terminvergabe';
+  document.getElementById('apt-title').textContent = appTitle;
+  await saveData();
+}
+async function updateDesc() {
+  appDesc = document.getElementById('apt-desc-input').value || appDesc;
+  document.getElementById('apt-desc').textContent = appDesc;
+  await saveData();
+}
+
+function openAdminLogin() {
+  if (adminMode) { exitAdmin(); return; }
+  document.getElementById('pw-overlay').classList.add('visible');
+  setTimeout(() => document.getElementById('pw-input').focus(), 100);
+}
+function closePwModal() {
+  document.getElementById('pw-overlay').classList.remove('visible');
+  document.getElementById('pw-input').value = '';
+  document.getElementById('pw-error').style.display = 'none';
+}
+function confirmPw() {
+  if (document.getElementById('pw-input').value === ADMIN_PW) { closePwModal(); enterAdmin(); }
+  else { document.getElementById('pw-error').style.display='block'; document.getElementById('pw-input').select(); }
+}
+function enterAdmin() {
+  adminMode = true;
+  document.body.classList.add('admin-mode');
+  document.getElementById('admin-panel').style.display = 'block';
+  document.querySelector('.admin-toggle button').textContent = '✕ Verwalter-Modus beenden';
+  const ti = document.getElementById('apt-title-input'); if(ti) ti.value = appTitle;
+  const di = document.getElementById('apt-desc-input');  if(di) di.value = appDesc;
+  renderSlots();
+}
+function exitAdmin() {
+  adminMode = false;
+  document.body.classList.remove('admin-mode');
+  document.getElementById('admin-panel').style.display = 'none';
+  document.querySelector('.admin-toggle button').textContent = '⚙ Verwalter-Modus';
+  renderSlots();
+}
+
+function uid() { return Math.random().toString(36).slice(2,9) + Date.now().toString(36); }
+function nowStr() { return new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr'; }
+function fmtDate(s) { if(!s) return ''; return new Date(s+'T00:00:00').toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'}); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+let toastTimer;
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show'+(type?' '+type:'');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className=''; }, 2800);
+}
+
+loadData();
+</script>
+</body>
+</html>
