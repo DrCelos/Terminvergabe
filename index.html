@@ -685,6 +685,8 @@ async function debugConnection() {
     alert('Debug-Ergebnis:\n\nURL: ' + fullUrl + '\n\nFehler: ' + e.name + '\n' + e.message + '\n\nBitte kopiere diese Info und teile sie.');
   }
 }
+
+function updateStatusBar(ok) {
   const bar = document.getElementById('jsonbin-status-bar');
   if (!bar) return;
   if (ok) {
